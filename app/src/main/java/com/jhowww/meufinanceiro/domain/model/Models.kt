@@ -84,3 +84,19 @@ data class MonthSummary(
     val fixedFraction: Float
         get() = if (totalIncomeCents > 0) fixedExpensesCents.toFloat() / totalIncomeCents else 0f
 }
+
+/** Ritmo de gastos variáveis no mês, dia a dia, comparado ao que sobra depois dos fixos. */
+data class SpendingPace(
+    val daysInMonth: Int,
+    /** Quanto dá para gastar no mês com variáveis: renda total - gastos fixos. */
+    val budgetCents: Long,
+    /** Gasto variável acumulado até cada dia já transcorrido (índice 0 = dia 1). */
+    val cumulativeCents: List<Long>,
+) {
+    val elapsedDays: Int get() = cumulativeCents.size
+    val spentCents: Long get() = cumulativeCents.lastOrNull() ?: 0L
+    /** Quanto seria "normal" ter gasto até hoje se o orçamento fosse distribuído por igual. */
+    val idealSoFarCents: Long get() = if (daysInMonth == 0) 0 else budgetCents * elapsedDays / daysInMonth
+    /** Projeção para o fim do mês mantendo a média diária atual. */
+    val projectedCents: Long get() = if (elapsedDays == 0) 0 else spentCents * daysInMonth / elapsedDays
+}

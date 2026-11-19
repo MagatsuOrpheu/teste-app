@@ -22,19 +22,19 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
 
     companion object {
-        /** Categorias criadas na primeira abertura (nome, cor ARGB). */
+        /** Categorias criadas na primeira abertura (nome, cor ARGB — paleta do Obsidian). */
         private val DEFAULT_CATEGORIES = listOf(
-            "Moradia" to 0xFF5C6BC0,
-            "Alimentação" to 0xFFEF6C00,
-            "Mercado" to 0xFF43A047,
-            "Transporte" to 0xFF1E88E5,
-            "Contas" to 0xFF8E24AA,
-            "Saúde" to 0xFFE53935,
-            "Educação" to 0xFF00897B,
-            "Lazer" to 0xFFFDD835,
-            "Assinaturas" to 0xFF6D4C41,
-            "Compras" to 0xFFD81B60,
-            "Outros" to 0xFF757575,
+            "Moradia" to 0xFFA882FF,
+            "Alimentação" to 0xFFE9973F,
+            "Mercado" to 0xFF44CF6E,
+            "Transporte" to 0xFF027AFF,
+            "Contas" to 0xFF53DFDD,
+            "Saúde" to 0xFFFB464C,
+            "Educação" to 0xFFE0DE71,
+            "Lazer" to 0xFFFA99CD,
+            "Assinaturas" to 0xFF8B6CEF,
+            "Compras" to 0xFFE8A87C,
+            "Outros" to 0xFF999999,
         )
 
         fun build(context: Context): AppDatabase =

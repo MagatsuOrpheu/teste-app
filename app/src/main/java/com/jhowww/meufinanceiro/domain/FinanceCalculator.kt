@@ -7,6 +7,7 @@ import com.jhowww.meufinanceiro.domain.model.EntryType
 import com.jhowww.meufinanceiro.domain.model.Insight
 import com.jhowww.meufinanceiro.domain.model.MonthSummary
 import com.jhowww.meufinanceiro.domain.model.RecurringItem
+import com.jhowww.meufinanceiro.domain.model.SpendingPace
 import com.jhowww.meufinanceiro.domain.model.Transaction
 import java.time.LocalDate
 import java.time.YearMonth
@@ -170,5 +171,27 @@ object FinanceCalculator {
         categories: List<Category>,
     ): List<MonthSummary> = months.map {
         summarize(it, today, recurring, emptySet(), transactions, categories).copy(insights = emptyList())
+    }
+
+    /** Gasto variável acumulado dia a dia no mês (até hoje, se for o mês atual). */
+    fun spendingPace(month: YearMonth, today: LocalDate, summary: MonthSummary, transactions: List<Transaction>): SpendingPace {
+        val days = month.lengthOfMonth()
+        val currentMonth = YearMonth.from(today)
+        val elapsed = when {
+            month == currentMonth -> today.dayOfMonth
+            month.isBefore(currentMonth) -> days
+            else -> 0
+        }
+        val perDay = LongArray(days + 1)
+        transactions
+            .filter { it.type == EntryType.EXPENSE && YearMonth.from(it.date) == month }
+            .forEach { perDay[it.date.dayOfMonth] += it.amountCents }
+        var acc = 0L
+        val cumulative = (1..elapsed).map { d -> acc += perDay[d]; acc }
+        return SpendingPace(
+            daysInMonth = days,
+            budgetCents = maxOf(0L, summary.totalIncomeCents - summary.fixedExpensesCents),
+            cumulativeCents = cumulative,
+        )
     }
 }

@@ -5,6 +5,18 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// Assinatura fixa: o keystore fica no repositório (em base64) protegido por senha forte.
+// A senha vem do Secret KEYSTORE_PASSWORD do GitHub. Sem a senha, o build usa a chave de debug.
+val keystorePassword: String? = System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+val keystoreB64 = rootProject.file("keystore/release.p12.b64")
+val releaseKeystore = layout.buildDirectory.file("signing/release.p12").get().asFile
+if (keystorePassword != null && keystoreB64.exists()) {
+    releaseKeystore.parentFile.mkdirs()
+    releaseKeystore.writeBytes(java.util.Base64.getMimeDecoder().decode(keystoreB64.readText()))
+}
+// Cada build do GitHub Actions ganha um número de versão maior, para o Android tratar como atualização.
+val buildNumber: Int = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+
 android {
     namespace = "com.jhowww.meufinanceiro"
     compileSdk = 35
@@ -13,9 +25,19 @@ android {
         applicationId = "com.jhowww.meufinanceiro"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = buildNumber
+        versionName = "1.$buildNumber"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = releaseKeystore
+            storePassword = keystorePassword
+            keyAlias = "meufinanceiro"
+            keyPassword = keystorePassword
+            storeType = "PKCS12"
+        }
     }
 
     buildTypes {
@@ -23,8 +45,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Para instalar o APK release sem configurar assinatura própria:
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystorePassword != null) signingConfigs.getByName("release")
+            else signingConfigs.getByName("debug")
         }
     }
 
