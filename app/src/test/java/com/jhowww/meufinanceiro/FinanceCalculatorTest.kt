@@ -98,4 +98,18 @@ class FinanceCalculatorTest {
         assertEquals("R$ 1.234,56", Money.format(123456))
         assertEquals("1234,56", Money.toInput(123456))
     }
+
+    @Test
+    fun ritmoDeGastos() {
+        val txs = listOf(tx(1000, 1), tx(2000, 3), tx(500, 19), tx(9999, 25), tx(50000, 2, null, EntryType.INCOME))
+        val s = FinanceCalculator.summarize(nov, today, listOf(salario, aluguel), emptySet(), txs, emptyList())
+        val p = FinanceCalculator.spendingPace(nov, today, s, txs)
+        assertEquals(30, p.daysInMonth)
+        assertEquals(19, p.elapsedDays) // não conta o dia 25 (futuro)
+        assertEquals(listOf(1000L, 1000L, 3000L), p.cumulativeCents.take(3))
+        assertEquals(3500L, p.spentCents)
+        assertEquals(350000L - 120000L, p.budgetCents) // renda (salário + extra) - fixos
+        assertEquals(3500L * 30 / 19, p.projectedCents)
+        assertEquals(230000L * 19 / 30, p.idealSoFarCents)
+    }
 }
