@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -12,7 +14,7 @@ val keystoreB64 = rootProject.file("keystore/release.p12.b64")
 val releaseKeystore = layout.buildDirectory.file("signing/release.p12").get().asFile
 if (keystorePassword != null && keystoreB64.exists()) {
     releaseKeystore.parentFile.mkdirs()
-    releaseKeystore.writeBytes(java.util.Base64.getMimeDecoder().decode(keystoreB64.readText()))
+    releaseKeystore.writeBytes(Base64.getMimeDecoder().decode(keystoreB64.readText()))
 }
 // Cada build do GitHub Actions ganha um número de versão maior, para o Android tratar como atualização.
 val buildNumber: Int = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
