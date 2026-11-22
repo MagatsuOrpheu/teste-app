@@ -100,3 +100,20 @@ data class SpendingPace(
     /** Projeção para o fim do mês mantendo a média diária atual. */
     val projectedCents: Long get() = if (elapsedDays == 0) 0 else spentCents * daysInMonth / elapsedDays
 }
+
+/**
+ * Saldo do mês dia a dia: começa com a renda fixa, desconta cada gasto fixo no dia do vencimento,
+ * cada gasto variável na data em que aconteceu e soma rendas extras.
+ */
+data class BalanceTimeline(
+    val daysInMonth: Int,
+    val startCents: Long,
+    /** Saldo ao fim de cada dia já transcorrido (índice 0 = dia 1). */
+    val dailyCents: List<Long>,
+    /** Previsão para o último dia do mês (null em meses que já acabaram). */
+    val projectedEndCents: Long?,
+) {
+    val elapsedDays: Int get() = dailyCents.size
+    val currentCents: Long get() = dailyCents.lastOrNull() ?: startCents
+    fun valueAt(day: Int): Long = if (day <= 0) startCents else dailyCents[minOf(day, elapsedDays) - 1]
+}
