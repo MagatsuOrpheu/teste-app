@@ -1,6 +1,7 @@
 package com.jhowww.meufinanceiro.domain
 
 import com.jhowww.meufinanceiro.domain.model.AlertLevel
+import com.jhowww.meufinanceiro.domain.model.BalanceTimeline
 import com.jhowww.meufinanceiro.domain.model.Category
 import com.jhowww.meufinanceiro.domain.model.CategorySpending
 import com.jhowww.meufinanceiro.domain.model.EntryType
@@ -193,5 +194,46 @@ object FinanceCalculator {
             budgetCents = maxOf(0L, summary.totalIncomeCents - summary.fixedExpensesCents),
             cumulativeCents = cumulative,
         )
+    }
+
+    /** Linha do saldo restante ao longo do mês, com previsão para o último dia. */
+    fun balanceTimeline(
+        month: YearMonth,
+        today: LocalDate,
+        recurring: List<RecurringItem>,
+        transactions: List<Transaction>,
+    ): BalanceTimeline {
+        val days = month.lengthOfMonth()
+        val currentMonth = YearMonth.from(today)
+        val elapsed = when {
+            month == currentMonth -> today.dayOfMonth
+            month.isBefore(currentMonth) -> days
+            else -> 0
+        }
+        val active = recurring.filter { it.isActiveIn(month) }
+        val start = active.filter { it.type == EntryType.INCOME }.sumOf { it.amountCents }
+        val fixed = active.filter { it.type == EntryType.EXPENSE }
+        val monthTx = transactions.filter { YearMonth.from(it.date) == month }
+
+        val delta = LongArray(days + 1)
+        fixed.forEach { delta[it.effectiveDay(month)] -= it.amountCents }
+        monthTx.forEach {
+            if (it.type == EntryType.INCOME) delta[it.date.dayOfMonth] += it.amountCents
+            else delta[it.date.dayOfMonth] -= it.amountCents
+        }
+        var acc = start
+        val daily = (1..elapsed).map { d -> acc += delta[d]; acc }
+
+        val projected = if (elapsed >= days) null else {
+            val variableSoFar = monthTx
+                .filter { it.type == EntryType.EXPENSE && it.date.dayOfMonth <= elapsed }
+                .sumOf { it.amountCents }
+            val avgDaily = if (elapsed > 0) variableSoFar / elapsed else 0L
+            val remainingFixed = fixed.filter { it.effectiveDay(month) > elapsed }.sumOf { it.amountCents }
+            val futureKnown = monthTx.filter { it.date.dayOfMonth > elapsed }
+                .sumOf { if (it.type == EntryType.INCOME) it.amountCents else -it.amountCents }
+            (daily.lastOrNull() ?: start) - remainingFixed - avgDaily * (days - elapsed) + futureKnown
+        }
+        return BalanceTimeline(days, start, daily, projected)
     }
 }

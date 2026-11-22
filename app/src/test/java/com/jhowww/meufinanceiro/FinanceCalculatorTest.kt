@@ -112,4 +112,23 @@ class FinanceCalculatorTest {
         assertEquals(3500L * 30 / 19, p.projectedCents)
         assertEquals(230000L * 19 / 30, p.idealSoFarCents)
     }
+
+    @Test
+    fun linhaDoSaldo() {
+        // salário 3000, aluguel 1200 dia 10, internet 100 dia 25; hoje = 19/11
+        val txs = listOf(tx(1000, 1), tx(2000, 3), tx(50000, 2, null, EntryType.INCOME), tx(500, 19))
+        val t = FinanceCalculator.balanceTimeline(nov, today, listOf(salario, aluguel, internet), txs)
+        assertEquals(300000L, t.startCents)
+        assertEquals(19, t.elapsedDays)
+        assertEquals(299000L, t.valueAt(1))
+        assertEquals(349000L, t.valueAt(2))
+        assertEquals(347000L, t.valueAt(3))
+        assertEquals(227000L, t.valueAt(10)) // aluguel descontado no vencimento
+        assertEquals(226500L, t.currentCents)
+        // previsão: atual - internet (dia 25) - média diária (3500/19) * 11 dias restantes
+        assertEquals(226500L - 10000L - (3500L / 19) * 11, t.projectedEndCents)
+        val passado = FinanceCalculator.balanceTimeline(YearMonth.of(2026, 10), today, listOf(salario), emptyList())
+        assertNull(passado.projectedEndCents)
+        assertEquals(31, passado.elapsedDays)
+    }
 }
