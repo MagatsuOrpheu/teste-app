@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Backup automático desligado até a Etapa 5, quando passa a ser escolha do usuário. -->
     <application
-        android:name=".MeuFinanceiroApp"
-        android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
-        android:fullBackupContent="@xml/backup_rules"
+        android:name=".FinanceiroApp"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MeuFinanceiro">
+        android:theme="@style/Theme.Financeiro">
         <activity
             android:name=".MainActivity"
             android:exported="true"

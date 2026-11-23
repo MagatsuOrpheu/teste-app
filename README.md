@@ -1,17 +1,23 @@
-# Meu Financeiro
+# Meu Financeiro (v2)
 
-App Android offline para controle financeiro mensal. Você informa quanto recebe e seus gastos fixos, e o app mostra quanto ainda está **livre para gastar** no mês e quanto isso dá por dia.
+Gestão financeira pessoal para Android, offline. Arquitetura aprovada no documento "Gestão Financeira Pessoal — Arquitetura".
 
-## Como instalar no celular
-O GitHub Actions compila o app a cada envio para a branch `main`. Abra **Releases** neste repositório, baixe o `MeuFinanceiro.apk` mais recente e instale (permita "instalar apps desconhecidos" quando o Android pedir).
+## Módulos
+| Módulo | Tipo | Conteúdo |
+|---|---|---|
+| `:app` | Android application | Interface Compose (Material 3, tema escuro), navegação, injeção manual |
+| `:core:domain` | Kotlin puro (JVM) | Motor financeiro e tipos de valor (`Dinheiro`, `Competencia`), testados com JUnit |
+| `:core:data` | Android library | Room: entidades, DAOs, migrações; esquemas em `core/data/schemas` |
 
-## O que ele faz
-- **Primeira abertura:** pergunta a renda mensal líquida, o dia do pagamento e os gastos fixos.
-- **Início:** saldo livre, quanto dá por dia, % da renda comprometida, contas pagas e pendentes, alertas.
-- **Gastos:** lançamentos do dia a dia e rendas extras.
-- **Fixos:** rendas e gastos fixos que se repetem todo mês, com marcação de "pago" e contas atrasadas em vermelho.
-- **Resumo:** gastos por categoria e renda x gastos dos últimos 6 meses.
-- **Ajustes:** categorias com cor e limite mensal opcional.
+Dependências: `app → data → domain`, `app → domain`. Versões em `gradle/libs.versions.toml`.
 
-## Stack
-Kotlin 2.0 · Jetpack Compose · Material 3 · Room · MVVM com StateFlow · minSdk 26 (Android 8).
+## Build
+Cada push no `main` roda no GitHub Actions: testes (`testDebugUnitTest`, que inclui `:core:domain:test`) e APK em Releases.
+
+## Andamento
+- [x] Etapa 1: estrutura do projeto
+- [ ] Etapa 2: banco de dados e modelos
+- [ ] Etapa 3: motor financeiro
+- [ ] Etapa 4: interface
+- [ ] Etapa 5: backup e segurança
+- [ ] Etapa 6: validação final

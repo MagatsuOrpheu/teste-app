@@ -1,1 +1,1 @@
-# Room e Compose já trazem suas próprias regras de consumer. Nada extra necessário.
+# Compose, Room e Navigation publicam as próprias regras de R8.

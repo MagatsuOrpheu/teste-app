@@ -1,14 +1,13 @@
 import java.util.Base64
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
-// Assinatura fixa: o keystore fica no repositório (em base64) protegido por senha forte.
-// A senha vem do Secret KEYSTORE_PASSWORD do GitHub. Sem a senha, o build usa a chave de debug.
+// Assinatura fixa: keystore no repositório (base64), senha no Secret KEYSTORE_PASSWORD do GitHub.
+// Sem a senha (build local), usa a chave de debug.
 val keystorePassword: String? = System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
 val keystoreB64 = rootProject.file("keystore/release.p12.b64")
 val releaseKeystore = layout.buildDirectory.file("signing/release.p12").get().asFile
@@ -16,20 +15,19 @@ if (keystorePassword != null && keystoreB64.exists()) {
     releaseKeystore.parentFile.mkdirs()
     releaseKeystore.writeBytes(Base64.getMimeDecoder().decode(keystoreB64.readText()))
 }
-// Cada build do GitHub Actions ganha um número de versão maior, para o Android tratar como atualização.
+// Cada build do GitHub Actions ganha um número de versão maior.
 val buildNumber: Int = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
 
 android {
-    namespace = "com.jhowww.meufinanceiro"
+    namespace = "com.jhowww.financeiro"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.jhowww.meufinanceiro"
+        applicationId = "com.jhowww.financeiro"
         minSdk = 26
         targetSdk = 35
         versionCode = buildNumber
-        versionName = "1.$buildNumber"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionName = "2.0.$buildNumber"
     }
 
     signingConfigs {
@@ -64,24 +62,27 @@ android {
     }
 }
 
+// O workflow roda "testDebugUnitTest"; isso garante que os testes do motor (módulo JVM) rodem junto.
+tasks.matching { it.name == "testDebugUnitTest" }.configureEach {
+    dependsOn(":core:domain:test")
+}
+
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
-    implementation(composeBom)
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-core")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation(project(":core:domain"))
+    implementation(project(":core:data"))
 
-    // Room (banco local)
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.kotlinx.coroutines.android)
 
-    testImplementation("junit:junit:4.13.2")
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    testImplementation(libs.junit)
+    debugImplementation(libs.compose.ui.tooling)
 }
