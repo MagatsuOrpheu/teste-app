@@ -12,5 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "MeuFinanceiro"
-include(":app")
+
+rootProject.name = "Financeiro"
+include(":app", ":core:domain", ":core:data")
