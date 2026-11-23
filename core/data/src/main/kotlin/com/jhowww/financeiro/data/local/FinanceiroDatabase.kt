@@ -14,6 +14,7 @@ import com.jhowww.financeiro.data.local.dao.GastoFixoDao
 import com.jhowww.financeiro.data.local.dao.ParcelamentoDao
 import com.jhowww.financeiro.data.local.dao.RendaDao
 import com.jhowww.financeiro.data.local.dao.ReservaDao
+import com.jhowww.financeiro.data.local.dao.RetratoDao
 import com.jhowww.financeiro.data.local.dao.UsuarioDao
 import com.jhowww.financeiro.data.local.entidade.AporteReservaEntity
 import com.jhowww.financeiro.data.local.entidade.CartaoEntity
@@ -75,6 +76,7 @@ abstract class FinanceiroDatabase : RoomDatabase() {
     abstract fun gastoFixoDao(): GastoFixoDao
     abstract fun parcelamentoDao(): ParcelamentoDao
     abstract fun despesaDao(): DespesaDao
+    abstract fun retratoDao(): RetratoDao
 
     companion object {
         const val VERSAO = 2

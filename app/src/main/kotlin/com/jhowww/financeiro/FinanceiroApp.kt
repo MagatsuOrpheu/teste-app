@@ -7,10 +7,12 @@ import com.jhowww.financeiro.data.repositorio.CategoriaRepositorio
 import com.jhowww.financeiro.data.repositorio.ConfiguracaoRepositorio
 import com.jhowww.financeiro.data.repositorio.DespesaRepositorio
 import com.jhowww.financeiro.data.repositorio.GastoFixoRepositorio
+import com.jhowww.financeiro.data.repositorio.Operacoes
 import com.jhowww.financeiro.data.repositorio.PagamentoRepositorio
 import com.jhowww.financeiro.data.repositorio.ParcelamentoRepositorio
 import com.jhowww.financeiro.data.repositorio.RendaRepositorio
 import com.jhowww.financeiro.data.repositorio.ReservaRepositorio
+import com.jhowww.financeiro.data.repositorio.RetratoRepositorio
 import com.jhowww.financeiro.data.repositorio.Sessao
 
 class FinanceiroApp : Application() {
@@ -30,4 +32,6 @@ class AppContainer(context: Context) {
     val gastosFixos by lazy { GastoFixoRepositorio(database, sessao) }
     val parcelamentos by lazy { ParcelamentoRepositorio(database, sessao) }
     val despesas by lazy { DespesaRepositorio(database, sessao) }
+    val retrato by lazy { RetratoRepositorio(database, sessao) }
+    val operacoes by lazy { Operacoes(database, sessao, pagamentos, despesas, parcelamentos) }
 }
