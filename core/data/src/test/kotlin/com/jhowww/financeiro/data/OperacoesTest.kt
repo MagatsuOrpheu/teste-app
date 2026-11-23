@@ -131,4 +131,24 @@ class OperacoesTest {
         assertTrue(dados.parcelas.all { it.faturaId != null })
         assertEquals(listOf(30_000L, 30_000L, 30_000L), dados.parcelas.map { it.valor.centavos })
     }
+
+    @Test
+    fun mudarPrimeiraParcelaDeslocaTodasERefazAsFaturas() = runBlocking {
+        val b = base()
+        val compra = CompraParcelada(
+            descricao = "Fone", valorTotal = Dinheiro(30_000), numeroParcelas = 3, dataCompra = LocalDate.of(2026, 11, 10),
+            primeiraCompetencia = nov, categoriaId = b.categoria, formaPagamentoId = b.credito, cartaoId = b.cartao,
+        )
+        val id = operacoes.lancarCompraParcelada(compra)
+        val antes = RetratoRepositorio(db, sessao).observar().first().dados
+        operacoes.mudarPrimeiraParcela(antes.compras.single(), antes.parcelas, dez)
+        val depois = RetratoRepositorio(db, sessao).observar().first().dados
+        assertEquals(dez, depois.compras.single { it.id == id }.primeiraCompetencia)
+        assertEquals(listOf(dez, Competencia.de(2027, 1), Competencia.de(2027, 2)), depois.parcelas.sortedBy { it.numero }.map { it.competencia })
+        val faturas = depois.faturas.associateBy { it.id }
+        assertEquals(
+            listOf(Competencia.de(2027, 1), Competencia.de(2027, 2), Competencia.de(2027, 3)),
+            depois.parcelas.sortedBy { it.numero }.map { faturas.getValue(it.faturaId!!).competencia },
+        )
+    }
 }
