@@ -82,6 +82,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.vico.compose.m3)
 
     testImplementation(libs.junit)
     debugImplementation(libs.compose.ui.tooling)
