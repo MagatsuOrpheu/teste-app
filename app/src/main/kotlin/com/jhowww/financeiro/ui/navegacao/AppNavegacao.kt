@@ -36,6 +36,7 @@ import com.jhowww.financeiro.domain.Competencia
 import com.jhowww.financeiro.ui.EstadoApp
 import com.jhowww.financeiro.ui.FinanceiroViewModel
 import com.jhowww.financeiro.ui.ajustes.TelaAjustes
+import com.jhowww.financeiro.ui.fixos.TelaFixos
 import com.jhowww.financeiro.ui.inicio.TelaInicio
 import com.jhowww.financeiro.ui.lancamentos.TelaLancamentos
 
@@ -76,7 +77,7 @@ fun AppNavegacao() {
         ) {
             // As telas leem o estado dentro do destino: o grafo não depende dos dados e não é refeito a cada gravação.
             composable(Aba.INICIO.rota) { ComEstado(vm) { e, m -> TelaInicio(vm, e, m, onIrParaAjustes = { irPara(nav, Aba.AJUSTES) }) } }
-            composable(Aba.FIXOS.rota) { TelaEmConstrucao(Aba.FIXOS) }
+            composable(Aba.FIXOS.rota) { ComEstado(vm) { e, m -> TelaFixos(vm, e, m) } }
             composable(Aba.LANCAMENTOS.rota) { ComEstado(vm) { e, m -> TelaLancamentos(vm, e, m) } }
             composable(Aba.RELATORIOS.rota) { TelaEmConstrucao(Aba.RELATORIOS) }
             composable(Aba.AJUSTES.rota) { ComEstado(vm) { e, _ -> TelaAjustes(vm, e) } }

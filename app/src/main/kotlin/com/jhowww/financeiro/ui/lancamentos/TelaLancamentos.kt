@@ -30,8 +30,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.jhowww.financeiro.domain.Competencia
 import com.jhowww.financeiro.domain.Dinheiro
+import com.jhowww.financeiro.domain.modelo.CompraParcelada
 import com.jhowww.financeiro.domain.modelo.DespesaPontual
 import com.jhowww.financeiro.domain.modelo.FormaPagamento
+import com.jhowww.financeiro.domain.modelo.GastoFixo
 import com.jhowww.financeiro.domain.motor.EstadoDespesa
 import com.jhowww.financeiro.domain.motor.ItemDespesa
 import com.jhowww.financeiro.domain.motor.OrigemDespesa
@@ -50,6 +52,8 @@ import com.jhowww.financeiro.ui.comum.SeletorMes
 import com.jhowww.financeiro.ui.comum.TextoSecundario
 import com.jhowww.financeiro.ui.comum.curta
 import com.jhowww.financeiro.ui.comum.paraCampo
+import com.jhowww.financeiro.ui.fixos.DialogoCompra
+import com.jhowww.financeiro.ui.fixos.DialogoOcorrencia
 import com.jhowww.financeiro.ui.theme.Cores
 import java.time.LocalDate
 
@@ -57,6 +61,8 @@ private sealed interface Dialogo {
     data class Despesa(val despesa: DespesaPontual?) : Dialogo
     data class Estorno(val original: DespesaPontual) : Dialogo
     data class Excluir(val despesa: DespesaPontual) : Dialogo
+    data class Fixo(val gasto: GastoFixo) : Dialogo
+    data class Compra(val compra: CompraParcelada) : Dialogo
 }
 
 fun textoEstado(item: ItemDespesa): String = when {
@@ -97,8 +103,11 @@ fun TelaLancamentos(vm: FinanceiroViewModel, estado: EstadoApp, mes: Competencia
             }
             items(itens, key = { "${it.origem}-${it.referenciaId}-${it.competencia}" }) { item ->
                 LinhaItem(item, estado) {
-                    if (item.origem == OrigemDespesa.PONTUAL) {
-                        despesasPorId[item.referenciaId]?.let { dialogo = Dialogo.Despesa(it) }
+                    val dados = estado.retrato.dados
+                    dialogo = when (item.origem) {
+                        OrigemDespesa.PONTUAL -> despesasPorId[item.referenciaId]?.let { Dialogo.Despesa(it) }
+                        OrigemDespesa.FIXO -> dados.gastosFixos.firstOrNull { it.id == item.referenciaId }?.let { Dialogo.Fixo(it) }
+                        OrigemDespesa.PARCELA -> dados.compras.firstOrNull { it.id == item.compraId }?.let { Dialogo.Compra(it) }
                     }
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -120,6 +129,8 @@ fun TelaLancamentos(vm: FinanceiroViewModel, estado: EstadoApp, mes: Competencia
             onFechar = { dialogo = null },
         )
         is Dialogo.Estorno -> DialogoEstorno(vm, d.original) { dialogo = null }
+        is Dialogo.Fixo -> DialogoOcorrencia(vm, estado, d.gasto, mes) { dialogo = null }
+        is Dialogo.Compra -> DialogoCompra(vm, estado, d.compra) { dialogo = null }
         is Dialogo.Excluir -> {
             val temEstorno = estado.retrato.dados.despesas.any { it.estornoDe == d.despesa.id }
             if (temEstorno) {
