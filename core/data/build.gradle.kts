@@ -20,6 +20,10 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // Testes do banco rodam na JVM com Robolectric (SQLite real, sem emulador).
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 // Esquemas exportados a cada versão do banco: base para escrever e testar migrações.
@@ -28,11 +32,14 @@ room {
 }
 
 dependencies {
-    implementation(project(":core:domain"))
-    implementation(libs.room.runtime)
+    api(project(":core:domain"))
+    api(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.kotlinx.coroutines.test)
 }
