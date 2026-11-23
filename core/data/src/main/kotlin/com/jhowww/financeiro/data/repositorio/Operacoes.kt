@@ -8,6 +8,7 @@ import com.jhowww.financeiro.domain.modelo.Cartao
 import com.jhowww.financeiro.domain.modelo.CompraParcelada
 import com.jhowww.financeiro.domain.modelo.DespesaPontual
 import com.jhowww.financeiro.domain.modelo.Fatura
+import com.jhowww.financeiro.domain.modelo.Parcela
 import com.jhowww.financeiro.domain.motor.CalendarioCartao
 import com.jhowww.financeiro.domain.motor.FaturaChave
 import com.jhowww.financeiro.domain.motor.Parcelamento
@@ -82,19 +83,30 @@ class Operacoes(
     suspend fun lancarCompraParcelada(compra: CompraParcelada, valorParcela: Dinheiro? = null): Long {
         sessao.usuarioId()
         val geradas = Parcelamento.gerar(compra.valorTotal, compra.numeroParcelas, compra.primeiraCompetencia, valorParcela)
-        return db.withTransaction {
-            val cartaoId = compra.cartaoId
-            val parcelas = if (cartaoId == null) {
-                geradas
-            } else {
-                val c = cartao(cartaoId)
-                val primeira = CalendarioCartao.faturaDaCompra(c, compra.dataCompra)
-                geradas.map { p ->
-                    val meses = p.competencia.mesesDesde(Competencia.de(compra.dataCompra))
-                    p.copy(faturaId = faturaDe(c, primeira.copy(competencia = primeira.competencia.mais(meses))).id)
-                }
-            }
-            parcelamentos.criar(compra, parcelas)
+        return db.withTransaction { parcelamentos.criar(compra, ligarAsFaturas(compra, geradas)) }
+    }
+
+    /**
+     * Muda a competência da primeira parcela: todas se deslocam juntas e, no cartão, voltam a ser
+     * ligadas às faturas correspondentes. Recusa se alguma parcela já foi marcada como paga.
+     */
+    suspend fun mudarPrimeiraParcela(compra: CompraParcelada, parcelas: List<Parcela>, novaPrimeira: Competencia) {
+        require(parcelas.none { it.pagaEm != null }) { "Desmarque as parcelas pagas antes de mudar a primeira parcela" }
+        sessao.usuarioId()
+        val deslocadas = Parcelamento.deslocar(parcelas, novaPrimeira)
+        val atualizada = compra.copy(primeiraCompetencia = novaPrimeira)
+        db.withTransaction { parcelamentos.substituir(atualizada, ligarAsFaturas(atualizada, deslocadas)) }
+    }
+
+    /** No cartão, cada parcela vai para uma fatura por mês, a partir da fatura da compra. */
+    private suspend fun ligarAsFaturas(compra: CompraParcelada, parcelas: List<Parcela>): List<Parcela> {
+        val cartaoId = compra.cartaoId ?: return parcelas.map { it.copy(faturaId = null, faturaManual = false) }
+        val c = cartao(cartaoId)
+        val primeira = CalendarioCartao.faturaDaCompra(c, compra.dataCompra)
+        return parcelas.map { p ->
+            if (p.faturaManual && p.faturaId != null) return@map p
+            val meses = p.competencia.mesesDesde(Competencia.de(compra.dataCompra))
+            p.copy(faturaId = faturaDe(c, primeira.copy(competencia = primeira.competencia.mais(meses))).id)
         }
     }
 }
