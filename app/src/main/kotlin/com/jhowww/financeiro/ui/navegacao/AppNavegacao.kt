@@ -1,13 +1,10 @@
 package com.jhowww.financeiro.ui.navegacao
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -20,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,6 +35,7 @@ import com.jhowww.financeiro.ui.ajustes.TelaAjustes
 import com.jhowww.financeiro.ui.fixos.TelaFixos
 import com.jhowww.financeiro.ui.inicio.TelaInicio
 import com.jhowww.financeiro.ui.lancamentos.TelaLancamentos
+import com.jhowww.financeiro.ui.relatorios.TelaRelatorios
 
 @Composable
 fun AppNavegacao() {
@@ -79,7 +76,7 @@ fun AppNavegacao() {
             composable(Aba.INICIO.rota) { ComEstado(vm) { e, m -> TelaInicio(vm, e, m, onIrParaAjustes = { irPara(nav, Aba.AJUSTES) }) } }
             composable(Aba.FIXOS.rota) { ComEstado(vm) { e, m -> TelaFixos(vm, e, m) } }
             composable(Aba.LANCAMENTOS.rota) { ComEstado(vm) { e, m -> TelaLancamentos(vm, e, m) } }
-            composable(Aba.RELATORIOS.rota) { TelaEmConstrucao(Aba.RELATORIOS) }
+            composable(Aba.RELATORIOS.rota) { ComEstado(vm) { e, m -> TelaRelatorios(vm, e, m) } }
             composable(Aba.AJUSTES.rota) { ComEstado(vm) { e, _ -> TelaAjustes(vm, e) } }
         }
     }
@@ -97,23 +94,5 @@ private fun irPara(nav: NavHostController, aba: Aba) {
         popUpTo(nav.graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
-    }
-}
-
-/** Marcador temporário: deixa claro que a tela ainda não existe, sem exibir dados fictícios. */
-@Composable
-private fun TelaEmConstrucao(aba: Aba) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(aba.titulo, style = MaterialTheme.typography.headlineSmall)
-        Text(
-            "Esta tela chega na próxima entrega da Etapa ${aba.etapa}.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
