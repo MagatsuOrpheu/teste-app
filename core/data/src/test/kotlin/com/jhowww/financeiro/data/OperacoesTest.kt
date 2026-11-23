@@ -21,6 +21,7 @@ import com.jhowww.financeiro.domain.modelo.FormaPagamento
 import com.jhowww.financeiro.domain.modelo.TipoPagamento
 import com.jhowww.financeiro.domain.motor.FaturaChave
 import com.jhowww.financeiro.domain.motor.MotorFinanceiro
+import com.jhowww.financeiro.domain.motor.StatusFatura
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -150,5 +151,35 @@ class OperacoesTest {
             listOf(Competencia.de(2027, 1), Competencia.de(2027, 2), Competencia.de(2027, 3)),
             depois.parcelas.sortedBy { it.numero }.map { faturas.getValue(it.faturaId!!).competencia },
         )
+    }
+
+    @Test
+    fun pagamentoParcialCriaAFaturaENaoMudaDespesas() = runBlocking {
+        val b = base()
+        operacoes.salvarDespesa(compraNoCartao(b, 50_000, LocalDate.of(2026, 10, 20)))
+        operacoes.pagarFatura(FaturaChave(b.cartao, nov), Dinheiro(30_000), LocalDate.of(2026, 11, 5))
+        val dados = RetratoRepositorio(db, sessao).observar().first().dados
+        val motor = MotorFinanceiro(dados, LocalDate.of(2026, 11, 6))
+        val fatura = motor.fatura(FaturaChave(b.cartao, nov))
+        assertEquals(Dinheiro(20_000), fatura.restante)
+        assertEquals(StatusFatura.PAGA_PARCIALMENTE, fatura.status)
+        assertEquals(Dinheiro(50_000), motor.resumoMes(Competencia.de(2026, 10)).despesas)
+    }
+
+    @Test
+    fun moverDespesaDeFaturaEVoltarAoAutomatico() = runBlocking {
+        val b = base()
+        val id = operacoes.salvarDespesa(compraNoCartao(b, 8_000, LocalDate.of(2026, 11, 10)))
+        val original = despesas.observarEntre(nov, nov).first().single { it.id == id }
+        operacoes.moverDespesa(original, FaturaChave(b.cartao, Competencia.de(2027, 1)))
+        val movida = despesas.observarEntre(nov, nov).first().single()
+        assertTrue(movida.faturaManual)
+        assertEquals(pagamentos.fatura(b.cartao, Competencia.de(2027, 1))!!.id, movida.faturaId)
+        assertEquals(nov, movida.competencia)
+
+        operacoes.moverDespesa(movida, null)
+        val devolvida = despesas.observarEntre(nov, nov).first().single()
+        assertTrue(!devolvida.faturaManual)
+        assertEquals(pagamentos.fatura(b.cartao, dez)!!.id, devolvida.faturaId)
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -21,8 +22,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +85,20 @@ fun corEstado(item: ItemDespesa): Color = when (item.estado) {
 @Composable
 fun TelaLancamentos(vm: FinanceiroViewModel, estado: EstadoApp, mes: Competencia) {
     var dialogo by remember { mutableStateOf<Dialogo?>(null) }
+    var secao by rememberSaveable { mutableIntStateOf(0) }
+    val cabecalho: @Composable () -> Unit = {
+        Column {
+            SeletorMes(mes, estado.competenciaAtual, vm::mudarMes, vm::irParaMesAtual)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = secao == 0, onClick = { secao = 0 }, label = { Text("Despesas") })
+                FilterChip(selected = secao == 1, onClick = { secao = 1 }, label = { Text("Faturas") })
+            }
+        }
+    }
+    if (secao == 1) {
+        ListaFaturas(vm, estado, mes, cabecalho)
+        return
+    }
     val itens = estado.motor.itensDoMes(mes).sortedWith(compareByDescending<ItemDespesa> { it.data }.thenByDescending { it.referenciaId })
     val resumo = estado.motor.resumoMes(mes)
     val despesasPorId = estado.retrato.dados.despesas.associateBy { it.id }
@@ -91,7 +108,7 @@ fun TelaLancamentos(vm: FinanceiroViewModel, estado: EstadoApp, mes: Competencia
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            item { SeletorMes(mes, estado.competenciaAtual, vm::mudarMes, vm::irParaMesAtual) }
+            item { cabecalho() }
             item {
                 Bloco {
                     LinhaValor("Total do mês", resumo.despesas, destaque = true)

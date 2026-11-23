@@ -8,7 +8,11 @@ import com.jhowww.financeiro.domain.modelo.Cartao
 import com.jhowww.financeiro.domain.modelo.CompraParcelada
 import com.jhowww.financeiro.domain.modelo.DespesaPontual
 import com.jhowww.financeiro.domain.modelo.Fatura
+import com.jhowww.financeiro.domain.modelo.GastoFixo
+import com.jhowww.financeiro.domain.modelo.OcorrenciaFixo
+import com.jhowww.financeiro.domain.modelo.PagamentoFatura
 import com.jhowww.financeiro.domain.modelo.Parcela
+import com.jhowww.financeiro.domain.modelo.StatusOcorrencia
 import com.jhowww.financeiro.domain.motor.CalendarioCartao
 import com.jhowww.financeiro.domain.motor.FaturaChave
 import com.jhowww.financeiro.domain.motor.Parcelamento
@@ -24,6 +28,7 @@ class Operacoes(
     private val pagamentos: PagamentoRepositorio,
     private val despesas: DespesaRepositorio,
     private val parcelamentos: ParcelamentoRepositorio,
+    private val gastosFixos: GastoFixoRepositorio = GastoFixoRepositorio(db, sessao),
 ) {
 
     private suspend fun cartao(id: Long): Cartao =
@@ -107,6 +112,69 @@ class Operacoes(
             if (p.faturaManual && p.faturaId != null) return@map p
             val meses = p.competencia.mesesDesde(Competencia.de(compra.dataCompra))
             p.copy(faturaId = faturaDe(c, primeira.copy(competencia = primeira.competencia.mais(meses))).id)
+        }
+    }
+
+    // ------------------------------------------------------------ faturas
+
+    /** Pagamento (parcial ou integral) de uma fatura; cria a fatura gravada se ela ainda só existia no cálculo. */
+    suspend fun pagarFatura(chave: FaturaChave, valor: Dinheiro, data: LocalDate): Long {
+        require(valor > Dinheiro.ZERO) { "O pagamento precisa ser maior que zero" }
+        sessao.usuarioId()
+        return db.withTransaction {
+            val fatura = faturaDe(cartao(chave.cartaoId), chave)
+            pagamentos.registrarPagamento(PagamentoFatura(faturaId = fatura.id, data = data, valor = valor))
+        }
+    }
+
+    /**
+     * Correção manual da fatura de destino (a validação de faturas quitadas fica com o motor, antes da chamada).
+     * Com [destino] nulo, volta à fatura calculada automaticamente. A competência da despesa nunca muda.
+     */
+    suspend fun moverDespesa(despesa: DespesaPontual, destino: FaturaChave?): Long {
+        val cartaoId = requireNotNull(despesa.cartaoId) { "A despesa não é do cartão" }
+        if (destino == null) return salvarDespesa(despesa.copy(faturaId = null, faturaManual = false))
+        require(destino.cartaoId == cartaoId) { "A fatura de destino precisa ser do mesmo cartão" }
+        sessao.usuarioId()
+        return db.withTransaction {
+            val fatura = faturaDe(cartao(cartaoId), destino)
+            salvarDespesa(despesa.copy(faturaId = fatura.id, faturaManual = true))
+        }
+    }
+
+    suspend fun moverParcela(compra: CompraParcelada, parcela: Parcela, destino: FaturaChave?) {
+        val cartaoId = requireNotNull(compra.cartaoId) { "A compra não é do cartão" }
+        sessao.usuarioId()
+        db.withTransaction {
+            val atualizada = if (destino == null) {
+                ligarAsFaturas(compra, listOf(parcela.copy(faturaId = null, faturaManual = false))).single()
+            } else {
+                require(destino.cartaoId == cartaoId) { "A fatura de destino precisa ser do mesmo cartão" }
+                parcela.copy(faturaId = faturaDe(cartao(cartaoId), destino).id, faturaManual = true)
+            }
+            parcelamentos.atualizarParcela(atualizada)
+        }
+    }
+
+    /** Gasto fixo no cartão: grava a fatura corrigida na ocorrência do mês (ou a desfaz). */
+    suspend fun moverFixo(gasto: GastoFixo, competencia: Competencia, gravada: OcorrenciaFixo?, destino: FaturaChave?) {
+        val cartaoId = requireNotNull(gasto.cartaoId) { "O gasto fixo não é do cartão" }
+        sessao.usuarioId()
+        db.withTransaction {
+            if (destino == null) {
+                if (gravada == null) return@withTransaction
+                // Só existia para guardar a fatura: volta a ser virtual.
+                if (gravada.status == StatusOcorrencia.REGISTRADA && gravada.valor == null) {
+                    gastosFixos.descartarOcorrencia(gasto.id, competencia)
+                } else {
+                    gastosFixos.salvarOcorrencia(gravada.copy(id = 0, faturaId = null, faturaManual = false))
+                }
+            } else {
+                require(destino.cartaoId == cartaoId) { "A fatura de destino precisa ser do mesmo cartão" }
+                val fatura = faturaDe(cartao(cartaoId), destino)
+                val base = gravada ?: OcorrenciaFixo(gastoFixoId = gasto.id, competencia = competencia, status = StatusOcorrencia.REGISTRADA)
+                gastosFixos.salvarOcorrencia(base.copy(id = 0, faturaId = fatura.id, faturaManual = true))
+            }
         }
     }
 }
