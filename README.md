@@ -16,7 +16,7 @@ Cada push no `main` roda no GitHub Actions: testes (`testDebugUnitTest`, que inc
 
 ## Andamento
 - [x] Etapa 1: estrutura do projeto
-- [ ] Etapa 2: banco de dados e modelos
+- [x] Etapa 2: banco de dados e modelos
 - [ ] Etapa 3: motor financeiro
 - [ ] Etapa 4: interface
 - [ ] Etapa 5: backup e segurança
